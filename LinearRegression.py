@@ -32,11 +32,9 @@ class LinearRegression:
 
             # gradient of feedforward
             g_f = 2 / n * (feedfoward - targets)        # (n, 1) -> 
-            print(g_f.shape, features.shape)
 
             # gradient with respect to M: 2/n * (feedforward) * input
-            g_M = g_f.T @ features            # (1, n) @ (n, x) = (1, x)
-            print(g_M.shape)
+            g_M = features.T @ g_f            # (x, n) @ (n, 1) = (x, 1)
 
             # gradient with respect to b: 2/n * (feedforward)
             g_b = g_f
