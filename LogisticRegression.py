@@ -1,39 +1,24 @@
 import numpy as np
 
+EPSILON = 10e-15
+
 def sigmoid(z: np.array): 
     """
-        \sigma(z) = \frac{1}{1 + e^{-z}}
+        \\sigma(z) = \\frac{1}{1 + e^{-z}}
                   = (1 + e^{-z}) ^ {-1}
     """
     return np.reciprocal(1 + np.exp(-z))
-
-def g_sigmoid(z: np.array):
-    """
-        \sigma'(z) = -1 * (1 + e^{-z}) ^ -2 * (e^{-z} * -1)
-                   = \frac{e^{-z}}{(1 - e^{-z})^2}
-                   = \sigma(z) * (1 - \sigma(z))
-    """
-    return sigmoid(z) * (1 - sigmoid(z))
 
 def binary_cross_entropy(pred: np.array, targ: np.array):
     """
     y_i is actual, p_i is predicted
 
-    - \frac{1}{N} \sum{y_i * ln(p_i) + (1 - y_i) * ln(1 - p_i)}
+    - \\frac{1}{N} \\sum{y_i * ln(p_i) + (1 - y_i) * ln(1 - p_i)}
     """
     assert(pred.shape == targ.shape)
 
-    return -np.average(targ * np.log(pred) + (1 - targ) * np.log(1 - pred))
-
-def g_BCE(pred: np.array, targ: np.array): 
-    """
-    gradient with respect to pred
-
-    Recall: ln'(x) = 1/x
-
-    - \frac{1}{N} \sum{y_i / p_i - (1 - y_i) / (1 - p_i)}
-    """
-    return -np.average((targ / pred) - ((1 - targ) / (1 - pred)))
+    pred = np.clip(pred, EPSILON, 1 - EPSILON)
+    return -np.mean(targ * np.log(pred) + (1 - targ) * np.log(1 - pred))
 
 class LogisticRegression: 
     def __init__(self, input_dimensions: int):      # x
@@ -46,39 +31,68 @@ class LogisticRegression:
         self.b = np.random.randn()                  # (1, )
 
     def eval(self, features: np.array, targets: np.array):
-        return np.average(np.abs(self.feedforward(features) - targets))
-    
-    def linear(self, features: np.array): 
-        return features @ self.M + self.b
+        """
+        evaluates the model performance based on accuracy
+        
+        :param features: input features
+        :type features: np.array
+        :param targets: targets
+        :type targets: np.array
 
+        accuracy = true / total
+        """
+        pred = self.feedforward(features) > 0.5
+        return np.mean(pred == targets)
+    
     def feedforward(self, features: np.array): 
         return sigmoid(features @ self.M + self.b)           # (n, 1)
 
     def train(self, features: np.array, targets: np.array, epochs:int = 0, learning_rate:float = 0.01): 
+        """
+        Train the linear regression model
+        
+        :param features: input data to train on.
+        :type features: np.array
+        :param targets: target data to train on.
+        :type targets: np.array
+        :param epochs: number of training loops
+        :type epochs: int
+        :param learning_rate: learning rate of the model. Coefficient of the gradients when updating parameters. 
+        :type learning_rate: float
+
+        In the math: 
+            - x: number of inputs
+            - n: number of training data
+        """
         assert(len(features.shape) == len(targets.shape) == 2)
         assert(features.shape == (targets.size, self.input_dimensions))
 
         n = features.shape[0]
 
         for i in range(epochs): 
-            feedforward_1 = self.linear(features)
-            feedforward_2 = self.feedforward(features)
+            feedforward = self.feedforward(features)
             
-            bce = binary_cross_entropy(feedforward_2, targets)
+            bce = binary_cross_entropy(feedforward, targets)
 
             print("Training loop: {}, BCE: {}".format(i, bce))
+        
 
-            # gradient of feedforward
-            g_J = g_BCE(feedforward_2, targets)        # (n, 1) -> 
-            g_z = g_J * g_sigmoid(feedforward_1)
+            # BACKPROPAGATION
+            """
+            calculating the gradient of the loss function with respect to z
+              - \\frac{1}{N} \\sum{y_i / p_i - (1 - y_i) / (1 - p_i)} * \\sigma(z) * (1 - \\sigma(z))
+            = \\frac{p_i - y_i}{N}
+            """
+
+            d_z = feedforward - targets       # (n, 1)
 
             # gradient with respect to M: 2/n * (feedforward) * input
-            g_M = features.T @ g_z            # (x, n) @ (n, 1) = (x, 1)
+            g_W = features.T @ d_z / n            # (x, n) @ (n, 1) = (x, 1)
 
             # gradient with respect to b: 2/n * (feedforward)
-            g_b = g_z
+            g_b = np.sum(d_z) / n             # (1, )
 
-            self.M -= learning_rate * g_M
+            self.M -= learning_rate * g_W
             self.b -= learning_rate * g_b
 
 if __name__ == "__main__": 
@@ -89,10 +103,8 @@ if __name__ == "__main__":
     model = LogisticRegression(2)
 
     print("Training =============================")
-    model.train(x, y, 1000, 0.1)
+    model.train(x, y, 100, 0.1)
 
     print("Evaluate =============================")
-    print("Predictions: ", model.feedforward(x))
-    print("Average difference: ", model.eval(x, y))
-
-    # bug: returned nan twice
+    print("Predictions: {}".format(model.feedforward(x)))
+    print("Accuracy ", model.eval(x, y))
