@@ -27,8 +27,8 @@ class LogisticRegression:
         self.input_dimensions = input_dimensions
 
         # initialize state
-        self.M = torch.randn(input_dimensions).reshape((input_dimensions, 1))  # (x, 1)
-        self.b = torch.randn((1, ))                  # (1, )
+        self.M = torch.randn((input_dimensions, 1), requires_grad=True)  # (x, 1)
+        self.b = torch.randn((1, ), requires_grad=True)                  # (1, )
 
     def eval(self, features: torch.tensor, targets: torch.tensor):
         """
@@ -85,16 +85,15 @@ class LogisticRegression:
             = \\frac{p_i - y_i}{N}
             """
 
-            d_z = feedforward - targets       # (n, 1)
+            self.M.grad = None
+            self.b.grad = None
 
-            # gradient with respect to M: 2/n * (feedforward) * input
-            g_W = features.T @ d_z / n            # (x, n) @ (n, 1) = (x, 1)
+            bce.backward()
+            
+            with torch.no_grad():
+                self.M -= learning_rate * self.M.grad
+                self.b -= learning_rate * self.b.grad
 
-            # gradient with respect to b: 2/n * (feedforward)
-            g_b = torch.sum(d_z) / n             # (1, )
-
-            self.M -= learning_rate * g_W
-            self.b -= learning_rate * g_b
 
 if __name__ == "__main__": 
     # Test: y = 2x + 3x + 5, 1 if below 10
@@ -107,5 +106,5 @@ if __name__ == "__main__":
     model.train(x, y, 100, 0.1)
 
     print("Evaluate =============================")
-    print("Predictions: {}".format(model.feedforward(x)))
+    print("Predictions: {}".format(model.feedforward(x).detach().numpy()))
     print("Accuracy ", model.eval(x, y))
