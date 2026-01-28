@@ -1,6 +1,6 @@
 import numpy as np
 
-EPSILON = 10e-15
+EPSILON = 1e-15
 
 def sigmoid(z: np.array): 
     """

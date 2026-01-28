@@ -1,6 +1,6 @@
 import torch
 
-EPSILON = 10e-15
+EPSILON = 1e-15
 
 def sigmoid(z: torch.tensor): 
     """
@@ -30,7 +30,7 @@ class LogisticRegression:
         self.M = torch.randn((input_dimensions, 1), requires_grad=True)  # (x, 1)
         self.b = torch.randn((1, ), requires_grad=True)                  # (1, )
 
-    def eval(self, features: torch.tensor, targets: torch.tensor):
+    def evaluate_accuracy(self, features: torch.tensor, targets: torch.tensor):
         """
         evaluates the model performance based on accuracy
       
@@ -48,7 +48,7 @@ class LogisticRegression:
     def feedforward(self, features: torch.tensor): 
         return sigmoid(features @ self.M + self.b)           # (n, 1)
 
-    def train(self, features: torch.tensor, targets: torch.tensor, epochs:int = 0, learning_rate:float = 0.01): 
+    def fit(self, features: torch.tensor, targets: torch.tensor, epochs:int = 0, learning_rate:float = 0.01): 
         """
         Train the linear regression model
         
@@ -103,8 +103,8 @@ if __name__ == "__main__":
     model = LogisticRegression(2)
 
     print("Training =============================")
-    model.train(x, y, 100, 0.1)
+    model.fit(x, y, 100, 0.1)
 
     print("Evaluate =============================")
     print("Predictions: {}".format(model.feedforward(x).detach().numpy()))
-    print("Accuracy ", model.eval(x, y))
+    print("Accuracy ", model.evaluate_accuracy(x, y))
